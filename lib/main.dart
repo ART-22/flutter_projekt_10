@@ -5,7 +5,6 @@ void main() {
   runApp(const MyApp());
 }
 
-// Віджет без стану
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -13,178 +12,258 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Практична робота №7',
+      title: 'Практична робота №10',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.blue,
         ),
         useMaterial3: true,
       ),
-      home: const ConfiguratorPage(),
+      home: const HomeScreen(),
     );
   }
 }
 
-// Віджет зі станом
-class ConfiguratorPage extends StatefulWidget {
-  const ConfiguratorPage({super.key});
+// Перший екран
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<ConfiguratorPage> createState() =>
-      _ConfiguratorPageState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _ConfiguratorPageState
-    extends State<ConfiguratorPage> {
+class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _textController =
+  TextEditingController();
 
-  double _topLeft = 0;
-  double _topRight = 0;
-  double _bottomLeft = 0;
-  double _bottomRight = 0;
+  final TextEditingController _sizeController =
+  TextEditingController(text: '32');
 
-  // Скидання налаштувань
-  void _reset() {
-    setState(() {
-      _topLeft = 0;
-      _topRight = 0;
-      _bottomLeft = 0;
-      _bottomRight = 0;
-    });
+  Future<void> _openPreview() async {
+    final text = _textController.text.trim();
+
+    final fontSize = double.tryParse(
+      _sizeController.text.trim().replaceAll(',', '.'),
+    );
+
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Спочатку введіть текст'),
+        ),
+      );
+      return;
+    }
+
+    if (fontSize == null ||
+        !fontSize.isFinite ||
+        fontSize < 1 ||
+        fontSize > 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Введіть розмір від 1 до 200'),
+        ),
+      );
+      return;
+    }
+
+    // Відкриваємо другий екран і чекаємо результат
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PreviewScreen(
+          text: text,
+          fontSize: fontSize,
+        ),
+      ),
+    );
+
+    if (!context.mounted) return;
+
+    // Визначаємо повідомлення залежно від результату
+    final message = switch (result) {
+      true => 'Cool!',
+      false => 'Let’s try something else',
+      null => "Don't know what to say",
+    };
+
+    // Показуємо діалогове вікно
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Результат'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('Закрити'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _sizeController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Конфігуратор Container'),
+        title: const Text('Практична робота №10'),
         backgroundColor: Colors.blue.shade100,
-        centerTitle: true,
       ),
       body: SafeArea(
-        child: ListView(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
-          children: [
-            const Text(
-              'Практична робота №7',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(
+                Icons.text_fields,
+                size: 75,
+                color: Colors.blue,
               ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Варіант 2 — налаштування кутів',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 30),
+              const SizedBox(height: 20),
 
-            // Контейнер попереднього перегляду
-            Center(
-              child: Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(_topLeft),
-                    topRight: Radius.circular(_topRight),
-                    bottomLeft:
-                    Radius.circular(_bottomLeft),
-                    bottomRight:
-                    Radius.circular(_bottomRight),
-                  ),
+              const Text(
+                'Налаштування тексту',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
 
-            const SizedBox(height: 30),
+              const SizedBox(height: 30),
 
-            CornerSlider(
-              title: 'Верхній лівий кут',
-              value: _topLeft,
-              onChanged: (value) {
-                setState(() => _topLeft = value);
-              },
-            ),
+              TextField(
+                controller: _textController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Введіть текст',
+                  hintText: 'Наприклад: Привіт, Flutter!',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.edit),
+                ),
+              ),
 
-            CornerSlider(
-              title: 'Верхній правий кут',
-              value: _topRight,
-              onChanged: (value) {
-                setState(() => _topRight = value);
-              },
-            ),
+              const SizedBox(height: 20),
 
-            CornerSlider(
-              title: 'Нижній лівий кут',
-              value: _bottomLeft,
-              onChanged: (value) {
-                setState(() => _bottomLeft = value);
-              },
-            ),
+              TextField(
+                controller: _sizeController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Розмір шрифту',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.format_size),
+                ),
+              ),
 
-            CornerSlider(
-              title: 'Нижній правий кут',
-              value: _bottomRight,
-              onChanged: (value) {
-                setState(() => _bottomRight = value);
-              },
-            ),
+              const SizedBox(height: 30),
 
-            const SizedBox(height: 15),
-
-            ElevatedButton.icon(
-              onPressed: _reset,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Скинути налаштування'),
-            ),
-          ],
+              ElevatedButton.icon(
+                onPressed: _openPreview,
+                icon: const Icon(Icons.preview),
+                label: const Text('Переглянути'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  textStyle: const TextStyle(fontSize: 18),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// Повторно використовуваний StatelessWidget
-class CornerSlider extends StatelessWidget {
-  final String title;
-  final double value;
-  final ValueChanged<double> onChanged;
+// Другий екран
+class PreviewScreen extends StatelessWidget {
+  final String text;
+  final double fontSize;
 
-  const CornerSlider({
+  const PreviewScreen({
     super.key,
-    required this.title,
-    required this.value,
-    required this.onChanged,
+    required this.text,
+    required this.fontSize,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment:
-          MainAxisAlignment.spaceBetween,
-          children: [
-            Text(title),
-            Text(
-              '${value.round()} px',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Попередній перегляд'),
+        backgroundColor: Colors.blue.shade100,
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const Text(
+                'Ваш текст:',
+                style: TextStyle(fontSize: 18),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 20),
+
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    child: Text(
+                      text,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context, true);
+                      },
+                      child: const Text('Ok'),
+                    ),
+                  ),
+
+                  const SizedBox(width: 15),
+
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.pop(context, false);
+                      },
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
-        Slider(
-          value: value,
-          min: 0,
-          max: 75,
-          divisions: 75,
-          label: '${value.round()}',
-          onChanged: onChanged,
-        ),
-      ],
+      ),
     );
   }
 }
